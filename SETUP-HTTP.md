@@ -1,7 +1,8 @@
-# Codely Bridge - Setup & Troubleshooting
+# Codely Bridge - Plugin Setup
 
 ## ✅ Plugin Installed
-Location: `%LOCALAPPDATA%\Roblox\Plugins\CodelyBridge\CodelyBridge.lua`
+
+Location: `studio-plugin/CodelyBridge.lua`
 
 ## ⚠️ CRITICAL: Enable HTTP in Roblox Studio
 
@@ -32,31 +33,49 @@ Run this in the command bar (View → Command Bar):
 game:GetService("HttpService").HttpEnabled = true
 ```
 
-## 🚀 How to Use
+## 📦 Install the Plugin
 
-1. **Start the bridge server** (if not running):
-   ```powershell
-   cd C:\Users\ziyad\.codely\Default\roblox-bridge\server
-   npm start
-   ```
+### Option A: Install from GitHub Releases
+1. Download the latest release from GitHub
+2. Extract the plugin files
+3. Open Roblox Studio
+4. Go to **File → Settings → Plugins**
+5. Click **"Add Plugin"** and select the files
 
-2. **Open Roblox Studio** with HTTP enabled
+### Option B: Copy Plugin Files Manually
+1. Copy the `studio-plugin` folder
+2. Paste it to:
+   - **Windows**: `%LOCALAPPDATA%\Roblox\Plugins\`
+   - **Mac**: `~/Library/Application Support/Roblox/Plugins/`
+3. Restart Roblox Studio
 
-3. **Look for the "Codely Bridge" button** in the toolbar
+### Option C: Import via Toolbox
+1. Open Roblox Studio
+2. Open the **Toolbox**
+3. Go to **My Plugins**
+4. Drag and drop `CodelyBridge.lua` into the folder
+5. Save and restart Studio
 
-4. **Click it** to open the panel
+## 🚀 Server Connection
 
-5. **Ask Codely** in this terminal to do things in Studio!
+The plugin connects to a bridge server that handles communication with Codely CLI.
 
-## 🎮 Example Commands
+### Default Configuration
+- **Server URL**: `http://localhost:7269`
+- **Protocol**: HTTP (not HTTPS)
+- **Port**: 7269
 
-In this chat, ask me to:
+### Connecting to a Different Server
+To connect to a remote/hosed server, edit `CodelyBridge.lua` and change:
 
+```lua
+-- Line 10: Change the SERVER_URL
+local SERVER_URL = "http://your-server-url:port"
 ```
-"Create a health script in ServerScriptService"
-"Make a red Part at position 0, 5, 0"
-"List all scripts in Workspace"
-"Create a ParticleEmitter for fire effects"
+
+Example:
+```lua
+local SERVER_URL = "http://my-bridge-server.com:7269"
 ```
 
 ## 🔍 Troubleshooting
@@ -65,39 +84,52 @@ In this chat, ask me to:
 - Follow the steps above to enable HTTP
 - Restart Roblox Studio
 
+### "Cannot connect to server"
+1. Check if the bridge server is running
+2. Verify the server URL in the plugin
+3. Check network/firewall settings
+4. Try pinging the server address
+
 ### "Connection lost" or red status
 - Make sure the bridge server is running
-- Check terminal for errors
-- Try clicking "Test Connection" in the plugin
-
-### "Timeout waiting for result"
-- Make sure Roblox Studio is open
-- Make sure the plugin is loaded (green status)
-- Check the plugin panel for error logs
+- Check server logs for errors
+- Verify server URL is correct
+- Try clicking "Test Connection" button
 
 ### Plugin not showing up
-1. Check the file is in `%LOCALAPPDATA%\Roblox\Plugins\CodelyBridge\`
+1. Check files are in the plugins folder
 2. Restart Roblox Studio
 3. Check View → Plugins → Codely Bridge
+4. Make sure `plugin.json` exists
 
-## ✅ Success Indicators
+### Commands timing out
+- Verify server is running and responsive
+- Check server logs for errors
+- Check network connection
+- Verify HTTP is enabled in Studio
 
-When everything works:
+## ✅ Verify Installation
 
-- ✅ Plugin shows green status: "✅ Connected to Codely Bridge"
-- ✅ Bridge server is running (see terminal)
-- ✅ You can send commands and receive responses
-- ✅ Commands execute in Studio instantly
+After installing:
 
-## 📝 Quick Test
+1. **Open Roblox Studio**
+2. **Look for "Codely Bridge" button** in toolbar
+3. **Click it** to open the panel
+4. **Check status**: Should show ✅ green
+5. **Click "Test Connection"** to verify
 
-Once set up, ask me:
+## 📝 Plugin Files
+
 ```
-"Test the Roblox Bridge connection"
+CodelyBridge/
+├── CodelyBridge.lua    # Main plugin script
+└── plugin.json          # Plugin manifest
 ```
 
-I'll send a test command and verify everything works!
+## 🎉 Ready to Use!
 
-## 🎉 Ready to Go!
+Once HTTP is enabled and the plugin is loaded, ask Codely to execute commands in Studio!
 
-Once HTTP is enabled and you restart Studio, just ask me what you want to create in Roblox Studio, and I'll do it!
+---
+
+**Need help?** Check the main README.md for usage examples!
