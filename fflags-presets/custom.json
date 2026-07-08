@@ -1,0 +1,6 @@
+{
+    "description": "Custom preset — edit this to create your own",
+    "flags": {
+        "DFIntTaskSchedulerTargetFps": "9999"
+    }
+}
