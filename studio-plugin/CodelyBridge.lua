@@ -6,7 +6,7 @@ local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 
 -- Configuration
-local SERVER_URL = "http://localhost:7269"
+local SERVER_URL = "https://web-production-f04e1.up.railway.app"
 local API_BASE = SERVER_URL .. "/api"
 
 -- Plugin toolbar

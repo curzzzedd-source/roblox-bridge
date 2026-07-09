@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 
-const http = require('http');
+const https = require('https');
+
+const SERVER_URL = 'https://web-production-f04e1.up.railway.app';
 
 async function sendCommand(action, data = {}) {
   return new Promise((resolve, reject) => {
     const postData = JSON.stringify({ action, data });
 
     const options = {
-      hostname: 'localhost',
-      port: 7269,
+      hostname: 'web-production-f04e1.up.railway.app',
       path: '/api/command',
       method: 'POST',
       headers: {
@@ -17,13 +18,12 @@ async function sendCommand(action, data = {}) {
       }
     };
 
-    const req = http.request(options, (res) => {
+    const req = https.request(options, (res) => {
       let data = '';
       res.on('data', (chunk) => data += chunk);
       res.on('end', () => {
         if (res.statusCode === 200) {
-          const response = JSON.parse(data);
-          resolve(response.commandId);
+          resolve(JSON.parse(data).commandId);
         } else {
           reject(new Error(`Status: ${res.statusCode}`));
         }
@@ -42,11 +42,11 @@ function getResult(commandId, timeout = 30000) {
 
     const poll = () => {
       if (Date.now() - startTime > timeout) {
-        reject(new Error('Timeout waiting for result'));
+        reject(new Error('Timeout'));
         return;
       }
 
-      http.get(`http://localhost:7269/api/result/${commandId}`, (res) => {
+      https.get(`${SERVER_URL}/api/result/${commandId}`, (res) => {
         let data = '';
         res.on('data', (chunk) => data += chunk);
         res.on('end', () => {
