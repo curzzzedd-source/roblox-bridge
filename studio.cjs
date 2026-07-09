@@ -49,8 +49,8 @@ function getResult(commandId, timeout = 30000) {
         res.on('data', c => d += c);
         res.on('end', () => {
           if (res.statusCode === 200) resolve(JSON.parse(d));
-          else if (res.statusCode === 404) setTimeout(poll, 500);
-          else reject(new Error(`HTTP ${res.statusCode}`));
+          else if (res.statusCode === 202 || res.statusCode === 404) setTimeout(poll, 500);
+          else reject(new Error(`HTTP ${res.statusCode}: ${d}`));
         });
       }).on('error', reject);
     };
