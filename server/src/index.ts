@@ -8,13 +8,14 @@ const PORT = parseInt(process.env.PORT || '7269', 10);
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
-// MongoDB connection
+// MongoDB
 const MONGO_URI = process.env.MONGO_URL || process.env.MONGODB_URI || 'mongodb://localhost:27017/roblox_bridge';
 const DB_NAME = 'roblox_bridge';
 
 let db: Db | null = null;
 let commandsCol: Collection<any> | null = null;
 let resultsCol: Collection<any> | null = null;
+let sessionsCol: Collection<any> | null = null;
 
 async function connectDB() {
   try {
@@ -23,50 +24,140 @@ async function connectDB() {
     db = client.db(DB_NAME);
     commandsCol = db.collection('commands');
     resultsCol = db.collection('results');
+    sessionsCol = db.collection('sessions');
 
-    // Auto-expire old commands (TTL index - 1 hour)
     await commandsCol.createIndex({ createdAt: 1 }, { expireAfterSeconds: 3600 });
     await resultsCol.createIndex({ createdAt: 1 }, { expireAfterSeconds: 3600 });
+    await sessionsCol.createIndex({ updatedAt: 1 }, { expireAfterSeconds: 60 });
 
     console.log('✅ Connected to MongoDB');
   } catch (err) {
-    console.error('⚠️ MongoDB connection failed, using in-memory fallback:', (err as Error).message);
+    console.error('⚠️ MongoDB failed, using in-memory:', (err as Error).message);
   }
 }
 
 // In-memory fallback
 const memCommands: Array<any> = [];
 const memResults = new Map<string, any>();
+const memSessions = new Map<string, any>();
 
-// Root route - no more 404 on Railway health checks
-app.get('/', (req: Request, res: Response) => {
-  res.json({
-    name: 'Codely Roblox Bridge',
-    status: 'running',
-    endpoints: {
-      health: '/health',
-      sendCommand: 'POST /api/command',
-      getCommands: 'GET /api/commands',
-      clearCommands: 'POST /api/commands/clear',
-      sendResult: 'POST /api/result',
-      getResult: 'GET /api/result/:commandId',
-    },
-  });
+// ========== SESSION MANAGEMENT ==========
+
+// Studio registers its current place
+app.post('/api/register', async (req: Request, res: Response) => {
+  const { sessionId, placeId, placeName, gameId } = req.body;
+
+  if (!sessionId) {
+    return res.status(400).json({ success: false, error: 'Missing sessionId' });
+  }
+
+  const session = {
+    sessionId,
+    placeId,
+    placeName,
+    gameId,
+    status: 'active',
+    updatedAt: new Date(),
+  };
+
+  if (sessionsCol) {
+    await sessionsCol.updateOne(
+      { sessionId },
+      { $set: session },
+      { upsert: true }
+    );
+  } else {
+    memSessions.set(sessionId, session);
+  }
+
+  console.log(`[${new Date().toISOString()}] Studio registered: ${placeName} (session: ${sessionId})`);
+  res.json({ success: true, sessionId });
 });
 
-// Health check
-app.get('/health', (req: Request, res: Response) => {
-  res.json({ status: 'ok' });
+// Studio sends heartbeat
+app.post('/api/heartbeat', async (req: Request, res: Response) => {
+  const { sessionId, placeInfo } = req.body;
+
+  if (!sessionId) {
+    return res.status(400).json({ success: false, error: 'Missing sessionId' });
+  }
+
+  if (sessionsCol) {
+    await sessionsCol.updateOne(
+      { sessionId },
+      { $set: { status: 'active', updatedAt: new Date(), ...placeInfo } }
+    );
+  } else if (memSessions.has(sessionId)) {
+    const s = memSessions.get(sessionId);
+    s.updatedAt = new Date();
+    s.status = 'active';
+  }
+
+  res.json({ success: true });
+});
+
+// Codely checks which Studio is active
+app.get('/api/session', async (req: Request, res: Response) => {
+  let session: any = null;
+
+  if (sessionsCol) {
+    // Find most recently updated active session
+    session = await sessionsCol.findOne(
+      { status: 'active' },
+      { sort: { updatedAt: -1 } }
+    );
+  } else {
+    let latest: any = null;
+    for (const [, s] of memSessions) {
+      if (!latest || s.updatedAt > latest.updatedAt) latest = s;
+    }
+    session = latest;
+  }
+
+  if (session) {
+    res.json({
+      sessionId: session.sessionId,
+      placeId: session.placeId,
+      placeName: session.placeName,
+      gameId: session.gameId,
+      status: session.status,
+    });
+  } else {
+    res.status(404).json({ error: 'No active Studio session' });
+  }
 });
 
 // ========== CODELY → STUDIO ==========
 
-// Send a command TO Studio
+// Send a command TO the active Studio session
 app.post('/api/command', async (req: Request, res: Response) => {
-  const { action, data } = req.body;
+  const { action, data, sessionId } = req.body;
 
   if (!action) {
     return res.status(400).json({ success: false, error: 'Missing action' });
+  }
+
+  // If no sessionId provided, try to find the active session
+  let targetSession = sessionId;
+
+  if (!targetSession) {
+    if (sessionsCol) {
+      const active = await sessionsCol.findOne(
+        { status: 'active' },
+        { sort: { updatedAt: -1 } }
+      );
+      if (active) targetSession = active.sessionId;
+    } else {
+      let latest: any = null;
+      for (const [, s] of memSessions) {
+        if (!latest || s.updatedAt > latest.updatedAt) latest = s;
+      }
+      if (latest) targetSession = latest.sessionId;
+    }
+  }
+
+  if (!targetSession) {
+    return res.status(404).json({ success: false, error: 'No active Studio session. Open Roblox Studio and ensure the plugin is loaded.' });
   }
 
   const commandId = `cmd_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -74,6 +165,7 @@ app.post('/api/command', async (req: Request, res: Response) => {
     id: commandId,
     action,
     data: data || {},
+    sessionId: targetSession,
     status: 'pending',
     createdAt: new Date(),
   };
@@ -84,18 +176,27 @@ app.post('/api/command', async (req: Request, res: Response) => {
     memCommands.push(command);
   }
 
-  console.log(`[${new Date().toISOString()}] Command queued: ${action} (${commandId})`);
-  res.json({ success: true, commandId });
+  console.log(`[${new Date().toISOString()}] Command queued: ${action} → session ${targetSession}`);
+  res.json({ success: true, commandId, sessionId: targetSession });
 });
 
-// Studio polls for pending commands
+// Studio polls for commands (only its own session)
 app.get('/api/commands', async (req: Request, res: Response) => {
+  const sessionId = req.query.sessionId as string;
+
   let commands: any[];
   if (commandsCol) {
-    commands = await commandsCol.find({ status: 'pending' }).toArray();
+    const query: any = { status: 'pending' };
+    if (sessionId) query.sessionId = sessionId;
+    commands = await commandsCol.find(query).toArray();
   } else {
-    commands = memCommands.filter(c => c.status === 'pending');
+    commands = memCommands.filter(c => {
+      if (c.status !== 'pending') return false;
+      if (sessionId && c.sessionId !== sessionId) return false;
+      return true;
+    });
   }
+
   res.json({ commands });
 });
 
@@ -104,13 +205,11 @@ app.post('/api/commands/clear', async (req: Request, res: Response) => {
   const { commandIds } = req.body;
   const ids = commandIds || [];
 
-  if (commandsCol) {
-    if (ids.length > 0) {
-      await commandsCol.updateMany(
-        { id: { $in: ids } },
-        { $set: { status: 'processing' } }
-      );
-    }
+  if (commandsCol && ids.length > 0) {
+    await commandsCol.updateMany(
+      { id: { $in: ids } },
+      { $set: { status: 'processing' } }
+    );
   } else {
     for (const id of ids) {
       const cmd = memCommands.find(c => c.id === id);
@@ -140,7 +239,6 @@ app.post('/api/result', async (req: Request, res: Response) => {
 
   if (resultsCol) {
     await resultsCol.insertOne(doc);
-    // Mark command as completed
     if (commandsCol) {
       await commandsCol.updateOne(
         { id: commandId },
@@ -157,7 +255,7 @@ app.post('/api/result', async (req: Request, res: Response) => {
   res.json({ success: true });
 });
 
-// Codely polls for result - returns 202 if pending (NO MORE 404!)
+// Codely polls for result — 202 if pending (no 404)
 app.get('/api/result/:commandId', async (req: Request, res: Response) => {
   const { commandId } = req.params;
 
@@ -174,15 +272,38 @@ app.get('/api/result/:commandId', async (req: Request, res: Response) => {
   if (result) {
     res.json(result);
   } else {
-    // Return 202 Accepted = still processing (not 404!)
     res.status(202).json({ status: 'pending', commandId });
   }
 });
 
-// Start server
+// ========== ROUTES ==========
+
+app.get('/', (req: Request, res: Response) => {
+  res.json({
+    name: 'Codely Roblox Bridge',
+    status: 'running',
+    endpoints: {
+      health: '/health',
+      register: 'POST /api/register',
+      session: 'GET /api/session',
+      heartbeat: 'POST /api/heartbeat',
+      sendCommand: 'POST /api/command',
+      getCommands: 'GET /api/commands?sessionId=...',
+      clearCommands: 'POST /api/commands/clear',
+      sendResult: 'POST /api/result',
+      getResult: 'GET /api/result/:commandId',
+    },
+  });
+});
+
+app.get('/health', (req: Request, res: Response) => {
+  res.json({ status: 'ok' });
+});
+
+// Start
 connectDB().then(() => {
   app.listen(PORT, () => {
     console.log(`🚀 Codely Bridge running on port ${PORT}`);
-    console.log(`📋 Waiting for commands...`);
+    console.log(`📋 Waiting for Studio to register...`);
   });
 });
