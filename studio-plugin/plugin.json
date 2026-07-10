@@ -1,8 +1,7 @@
 {
   "name": "Codely Bridge",
   "version": "1.0.0",
-  "description": "Connect Roblox Studio to Codely CLI for AI-powered code assistance",
-  "author": "Your Name",
-  "scripts": [],
-  "dependencies": {}
+  "description": "Connect Roblox Studio to Codely CLI for AI-powered code assistance.",
+  "author": "curzzzedd-source",
+  "permissions": ["HTTP Requests", "Script Injection"]
 }

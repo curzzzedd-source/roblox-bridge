@@ -1,5 +1,5 @@
--- Codely Bridge — Lemonade-style UI
--- Clean, compact, activation-gated
+-- Codely Bridge — Plugin Card Style
+-- Clean toggle card like Lemonade
 
 local Plugin = plugin or script.Parent
 local HttpService = game:GetService("HttpService")
@@ -34,20 +34,23 @@ local httpSuccess, _ = pcall(function() return HttpService:GetAsync(SERVER_URL .
 
 -- Plugin toolbar
 local toolbar = plugin:CreateToolbar("Codely Bridge")
-local widgetInfo = DockWidgetPluginGuiInfo.new(Enum.InitialDockState.Right, false, false, 260, 180, 260, 180)
+local widgetInfo = DockWidgetPluginGuiInfo.new(Enum.InitialDockState.Right, false, false, 300, 200, 300, 200)
 local widget = plugin:CreateDockWidgetPluginGui("CodelyBridgeWidget", widgetInfo)
 widget.Title = "Codely Bridge"
 
--- ===== STYLES =====
-local C_BG = Color3.fromRGB(255, 255, 255)
-local C_TEXT = Color3.fromRGB(40, 40, 40)
+-- ===== COLORS =====
+local C_WHITE = Color3.fromRGB(255, 255, 255)
+local C_BG = Color3.fromRGB(245, 245, 245)
+local C_CARD = Color3.fromRGB(255, 255, 255)
+local C_TEXT = Color3.fromRGB(30, 30, 30)
 local C_SUBTEXT = Color3.fromRGB(130, 130, 130)
+local C_BLUE = Color3.fromRGB(59, 130, 246)
 local C_GREEN = Color3.fromRGB(34, 197, 94)
-local C_RED = Color3.fromRGB(220, 50, 50)
-local C_GREY = Color3.fromRGB(55, 55, 55)
-local C_LIGHT_GREY = Color3.fromRGB(240, 240, 240)
+local C_RED = Color3.fromRGB(239, 68, 68)
+local C_GREY = Color3.fromRGB(100, 100, 100)
+local C_BORDER = Color3.fromRGB(230, 230, 230)
 
--- Root frame
+-- Root
 local root = Instance.new("Frame")
 root.Size = UDim2.new(1, 0, 1, 0)
 root.BackgroundColor3 = C_BG
@@ -57,163 +60,172 @@ root.Parent = widget
 local padding = Instance.new("UIPadding")
 padding.PaddingTop = UDim.new(0, 12)
 padding.PaddingBottom = UDim.new(0, 12)
-padding.PaddingLeft = UDim.new(0, 14)
-padding.PaddingRight = UDim.new(0, 14)
+padding.PaddingLeft = UDim.new(0, 12)
+padding.PaddingRight = UDim.new(0, 12)
 padding.Parent = root
 
 local layout = Instance.new("UIListLayout")
 layout.Padding = UDim.new(0, 10)
-layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 layout.Parent = root
 
--- Helper: pill button
-local function createPillButton(text, bgColor)
-	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(0, 90, 0, 30)
-	btn.BackgroundColor3 = bgColor
-	btn.BorderSizePixel = 0
-	btn.Text = text
-	btn.TextSize = 14
-	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-	btn.Font = Enum.Font.GothamBold
-	btn.AutoButtonColor = false
-	btn.Parent = root
-
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(1, 0)
-	corner.Parent = btn
-
-	return btn
-end
-
--- Helper: label
-local function createLabel(text, textSize, color)
-	local lbl = Instance.new("TextLabel")
-	lbl.Size = UDim2.new(1, 0, 0, textSize or 14)
-	lbl.BackgroundTransparency = 1
-	lbl.Text = text
-	lbl.TextSize = textSize or 14
-	lbl.TextColor3 = color or C_TEXT
-	lbl.Font = Enum.Font.Gotham
-	lbl.TextXAlignment = Enum.TextXAlignment.Center
-	lbl.Parent = root
-	return lbl
-end
-
 -- ===== HEADER =====
-local headerFrame = Instance.new("Frame")
-headerFrame.Size = UDim2.new(1, 0, 0, 32)
-headerFrame.BackgroundTransparency = 1
-headerFrame.Parent = root
+local header = Instance.new("TextLabel")
+header.Size = UDim2.new(1, 0, 0, 24)
+header.BackgroundTransparency = 1
+header.Text = "Plugins"
+header.TextSize = 18
+header.TextColor3 = C_TEXT
+header.Font = Enum.Font.GothamBold
+header.TextXAlignment = Enum.TextXAlignment.Left
+header.Parent = root
 
-local headerLayout = Instance.new("UIListLayout")
-headerLayout.FillDirection = Enum.FillDirection.Horizontal
-headerLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-headerLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-headerLayout.Padding = UDim.new(0, 6)
-headerLayout.Parent = headerFrame
+-- ===== CARD =====
+local card = Instance.new("Frame")
+card.Size = UDim2.new(1, 0, 0, 130)
+card.BackgroundColor3 = C_CARD
+card.BorderSizePixel = 0
+card.Parent = root
 
--- Icon (emoji as text)
-local iconLabel = Instance.new("TextLabel")
-iconLabel.Size = UDim2.new(0, 22, 0, 22)
-iconLabel.BackgroundTransparency = 1
-iconLabel.Text = "⚡"
-iconLabel.TextSize = 18
-iconLabel.TextColor3 = C_TEXT
-iconLabel.Parent = headerFrame
+local cardCorner = Instance.new("UICorner")
+cardCorner.CornerRadius = UDim.new(0, 10)
+cardCorner.Parent = card
 
--- Version
-local versionLabel = Instance.new("TextLabel")
-versionLabel.Size = UDim2.new(0, 60, 0, 22)
-versionLabel.BackgroundTransparency = 1
-versionLabel.Text = VERSION
-versionLabel.TextSize = 13
-versionLabel.TextColor3 = C_SUBTEXT
-versionLabel.Font = Enum.Font.GothamMedium
-versionLabel.TextXAlignment = Enum.TextXAlignment.Left
-versionLabel.Parent = headerFrame
+local cardStroke = Instance.new("UIStroke")
+cardStroke.Color = C_BORDER
+cardStroke.Thickness = 1
+cardStroke.Parent = card
 
--- ===== BUTTONS ROW =====
-local btnRow = Instance.new("Frame")
-btnRow.Size = UDim2.new(1, 0, 0, 34)
-btnRow.BackgroundTransparency = 1
-btnRow.Parent = root
+local cardPad = Instance.new("UIPadding")
+cardPad.PaddingTop = UDim.new(0, 12)
+cardPad.PaddingBottom = UDim.new(0, 12)
+cardPad.PaddingLeft = UDim.new(0, 12)
+cardPad.PaddingRight = UDim.new(0, 12)
+cardPad.Parent = card
 
-local btnLayout = Instance.new("UIListLayout")
-btnLayout.FillDirection = Enum.FillDirection.Horizontal
-btnLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-btnLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-btnLayout.Padding = UDim.new(0, 8)
-btnLayout.Parent = btnRow
+local cardLayout = Instance.new("UIListLayout")
+cardLayout.Padding = UDim.new(0, 6)
+cardLayout.Parent = card
 
--- Connect button (ACTIVATE)
-local connectBtn = createPillButton("Connect", C_GREEN)
-connectBtn.Parent = btnRow
+-- Row 1: Icon + Name + Author + Toggle
+local topRow = Instance.new("Frame")
+topRow.Size = UDim2.new(1, 0, 0, 36)
+topRow.BackgroundTransparency = 1
+topRow.Parent = card
 
--- Status button (shows state)
-local statusBtn = createPillButton("Status", C_GREY)
-statusBtn.Parent = btnRow
+-- Icon (square black box with ⚡)
+local iconBox = Instance.new("Frame")
+iconBox.Size = UDim2.new(0, 36, 0, 36)
+iconBox.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+iconBox.BorderSizePixel = 0
+iconBox.Parent = topRow
 
--- ===== INSTRUCTION TEXT =====
-local instructionLabel = createLabel("Open a place in Studio then press Connect", 13, C_SUBTEXT)
-instructionLabel.Size = UDim2.new(1, -10, 0, 32)
-instructionLabel.TextWrapped = true
+local iconCorner = Instance.new("UICorner")
+iconCorner.CornerRadius = UDim.new(0, 8)
+iconCorner.Parent = iconBox
 
--- ===== PLACE NAME (hidden until connected) =====
-local placeLabel = createLabel("", 12, C_SUBTEXT)
-placeLabel.Visible = false
+local iconText = Instance.new("TextLabel")
+iconText.Size = UDim2.new(1, 0, 1, 0)
+iconText.BackgroundTransparency = 1
+iconText.Text = "⚡"
+iconText.TextSize = 20
+iconText.TextColor3 = C_WHITE
+iconText.Parent = iconBox
 
--- ===== LOGS BUTTON =====
-local logsBtn = Instance.new("TextButton")
-logsBtn.Size = UDim2.new(0, 80, 0, 24)
-logsBtn.BackgroundColor3 = C_BG
-logsBtn.BorderSizePixel = 1
-logsBtn.BorderColor3 = C_LIGHT_GREY
-logsBtn.Text = "Logs Off"
-logsBtn.TextSize = 12
-logsBtn.TextColor3 = C_SUBTEXT
-logsBtn.Font = Enum.Font.GothamMedium
-logsBtn.AutoButtonColor = false
-logsBtn.Parent = root
+-- Name + Author
+local nameFrame = Instance.new("Frame")
+nameFrame.Size = UDim2.new(1, -100, 1, 0)
+nameFrame.Position = UDim2.new(0, 44, 0, 0)
+nameFrame.BackgroundTransparency = 1
+nameFrame.Parent = topRow
 
-local logsCorner = Instance.new("UICorner")
-logsCorner.CornerRadius = UDim.new(1, 0)
-logsCorner.Parent = logsBtn
+local nameLayout = Instance.new("UIListLayout")
+nameLayout.Padding = UDim.new(0, 0)
+nameLayout.Parent = nameFrame
+
+local nameLabel = Instance.new("TextLabel")
+nameLabel.Size = UDim2.new(1, 0, 0, 20)
+nameLabel.BackgroundTransparency = 1
+nameLabel.Text = "Codely Bridge"
+nameLabel.TextSize = 15
+nameLabel.TextColor3 = C_TEXT
+nameLabel.Font = Enum.Font.GothamBold
+nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+nameLabel.Parent = nameFrame
+
+local authorLabel = Instance.new("TextLabel")
+authorLabel.Size = UDim2.new(1, 0, 0, 16)
+authorLabel.BackgroundTransparency = 1
+authorLabel.Text = "curzzzedd-source"
+authorLabel.TextSize = 13
+authorLabel.TextColor3 = C_BLUE
+authorLabel.Font = Enum.Font.GothamMedium
+authorLabel.TextXAlignment = Enum.TextXAlignment.Left
+authorLabel.Parent = nameFrame
+
+-- Toggle switch (right side)
+local toggleFrame = Instance.new("TextButton")
+toggleFrame.Size = UDim2.new(0, 44, 0, 24)
+toggleFrame.BackgroundColor3 = C_GREY
+toggleFrame.BorderSizePixel = 0
+toggleFrame.Text = ""
+toggleFrame.AutoButtonColor = false
+toggleFrame.Parent = topRow
+toggleFrame.Position = UDim2.new(1, -44, 0.5, -12)
+
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(1, 0)
+toggleCorner.Parent = toggleFrame
+
+local toggleKnob = Instance.new("Frame")
+toggleKnob.Size = UDim2.new(0, 18, 0, 18)
+toggleKnob.Position = UDim2.new(0, 3, 0.5, -9)
+toggleKnob.BackgroundColor3 = C_WHITE
+toggleKnob.BorderSizePixel = 0
+toggleKnob.Parent = toggleFrame
+
+local knobCorner = Instance.new("UICorner")
+knobCorner.CornerRadius = UDim.new(1, 0)
+knobCorner.Parent = toggleKnob
+
+-- Row 2: Description
+local descLabel = Instance.new("TextLabel")
+descLabel.Size = UDim2.new(1, 0, 0, 16)
+descLabel.BackgroundTransparency = 1
+descLabel.Text = "Connect Roblox Studio to Codely CLI."
+descLabel.TextSize = 13
+descLabel.TextColor3 = C_SUBTEXT
+descLabel.Font = Enum.Font.Gotham
+descLabel.TextXAlignment = Enum.TextXAlignment.Left
+descLabel.Parent = card
+
+-- Row 3: Permissions
+local permsLabel = Instance.new("TextLabel")
+permsLabel.Size = UDim2.new(1, 0, 0, 14)
+permsLabel.BackgroundTransparency = 1
+permsLabel.Text = "HTTP Requests ✓  |  Script Injection Allowed"
+permsLabel.TextSize = 11
+permsLabel.TextColor3 = C_GREY
+permsLabel.Font = Enum.Font.GothamMedium
+permsLabel.TextXAlignment = Enum.TextXAlignment.Left
+permsLabel.Parent = card
+
+-- Row 4: Status text
+local statusText = Instance.new("TextLabel")
+statusText.Size = UDim2.new(1, 0, 0, 14)
+statusText.BackgroundTransparency = 1
+statusText.Text = "● Inactive — Click toggle to connect"
+statusText.TextSize = 11
+statusText.TextColor3 = C_GREY
+statusText.Font = Enum.Font.GothamMedium
+statusText.TextXAlignment = Enum.TextXAlignment.Left
+statusText.Parent = card
 
 -- ===== STATE =====
 local isActivated = false
 local isConnected = false
-local logsVisible = false
 local processedCommandIds = {}
 
--- ===== LOG PANEL (hidden by default) =====
-local logPanel = Instance.new("TextLabel")
-logPanel.Size = UDim2.new(1, 0, 0, 0)
-logPanel.BackgroundColor3 = Color3.fromRGB(250, 250, 250)
-logPanel.BorderSizePixel = 0
-logPanel.Text = ""
-logPanel.TextSize = 11
-logPanel.TextColor3 = C_SUBTEXT
-logPanel.Font = Enum.Font.Code
-logPanel.TextXAlignment = Enum.TextXAlignment.Left
-logPanel.TextYAlignment = Enum.TextYAlignment.Top
-logPanel.TextWrapped = true
-logPanel.Visible = false
-logPanel.Parent = root
-
-local logCorner = Instance.new("UICorner")
-logCorner.CornerRadius = UDim.new(0, 6)
-logCorner.Parent = logPanel
-
 -- ===== LOGIC =====
-
-local function log(msg)
-	local stamp = os.date("%H:%M:%S")
-	logPanel.Text = logPanel.Text .. "[" .. stamp .. "] " .. msg .. "\n"
-	if string.len(logPanel.Text) > 600 then
-		logPanel.Text = string.sub(logPanel.Text, -500)
-	end
-end
 
 local function safeHttpGet(url)
 	return pcall(function() return HttpService:RequestAsync({ Url = url, Method = "GET" }) end)
@@ -231,8 +243,6 @@ end
 
 local function registerSession()
 	local info = getPlaceInfo()
-	placeLabel.Text = info.placeName
-	placeLabel.Visible = true
 	safeHttpPost(API_BASE .. "/register", {
 		sessionId = SESSION_ID, placeId = info.placeId,
 		placeName = info.placeName, gameId = info.gameId,
@@ -252,73 +262,42 @@ local function testConnection()
 	end
 end
 
--- ===== ACTIVATION TOGGLE =====
-
-local function setActivated(activated)
-	isActivated = activated
-	if activated then
-		connectBtn.Text = "Disconnect"
-		connectBtn.BackgroundColor3 = C_RED
-		instructionLabel.Text = "Codely is connected and active"
-		instructionLabel.TextColor3 = C_GREEN
-		statusBtn.Text = "Active"
-		statusBtn.BackgroundColor3 = C_GREEN
-		log("✅ Activated")
+-- Toggle animation
+local function setToggle(on)
+	isActivated = on
+	if on then
+		-- Animate knob right
+		local tw = Instance.new("TweenInfo")
+		tw = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		game:GetService("TweenService"):Create(toggleFrame, tw, { BackgroundColor3 = C_GREEN }):Play()
+		game:GetService("TweenService"):Create(toggleKnob, tw, { Position = UDim2.new(0, 23, 0.5, -9) }):Play()
+		statusText.Text = "● Active — " .. placeInfo.placeName
+		statusText.TextColor3 = C_GREEN
 		registerSession()
 		safeHttpPost(API_BASE .. "/heartbeat", {
 			sessionId = SESSION_ID, placeInfo = getPlaceInfo(), activated = true,
 		})
 	else
-		connectBtn.Text = "Connect"
-		connectBtn.BackgroundColor3 = C_GREEN
-		instructionLabel.Text = "Open a place in Studio then press Connect"
-		instructionLabel.TextColor3 = C_SUBTEXT
-		statusBtn.Text = "Status"
-		statusBtn.BackgroundColor3 = C_GREY
-		log("🛑 Deactivated")
+		local tw = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		game:GetService("TweenService"):Create(toggleFrame, tw, { BackgroundColor3 = C_GREY }):Play()
+		game:GetService("TweenService"):Create(toggleKnob, tw, { Position = UDim2.new(0, 3, 0.5, -9) }):Play()
+		statusText.Text = "● Inactive — Click toggle to connect"
+		statusText.TextColor3 = C_GREY
 		safeHttpPost(API_BASE .. "/heartbeat", {
 			sessionId = SESSION_ID, placeInfo = getPlaceInfo(), activated = false,
 		})
 	end
 end
 
-connectBtn.MouseButton1Click:Connect(function()
+toggleFrame.MouseButton1Click:Connect(function()
 	if not isConnected then
 		testConnection()
 	end
 	if isConnected then
-		setActivated(not isActivated)
+		setToggle(not isActivated)
 	else
-		instructionLabel.Text = "Cannot connect — check server"
-		instructionLabel.TextColor3 = C_RED
-	end
-end)
-
-statusBtn.MouseButton1Click:Connect(function()
-	if isActivated then
-		instructionLabel.Text = "✅ Active — " .. placeInfo.placeName
-		instructionLabel.TextColor3 = C_GREEN
-	else
-		instructionLabel.Text = "🔒 Inactive — press Connect"
-		instructionLabel.TextColor3 = C_SUBTEXT
-	end
-end)
-
--- Logs toggle
-logsBtn.MouseButton1Click:Connect(function()
-	logsVisible = not logsVisible
-	if logsVisible then
-		logsBtn.Text = "Logs On"
-		logPanel.Size = UDim2.new(1, 0, 0, 80)
-		logPanel.Visible = true
-		widget.Size = Vector2.new(260, 280)
-		widget.MinSize = Vector2.new(260, 280)
-	else
-		logsBtn.Text = "Logs Off"
-		logPanel.Size = UDim2.new(1, 0, 0, 0)
-		logPanel.Visible = false
-		widget.Size = Vector2.new(260, 180)
-		widget.MinSize = Vector2.new(260, 180)
+		statusText.Text = "● Cannot connect — check server"
+		statusText.TextColor3 = C_RED
 	end
 end)
 
@@ -343,12 +322,9 @@ local function executeCommand(command)
 
 	if not isActivated then
 		result = { success = false, error = "Not activated" }
-		log("⚠ Rejected: not activated")
 		safeHttpPost(API_BASE .. "/result", { commandId = command.id, result = result, sessionId = SESSION_ID })
 		return
 	end
-
-	log("→ " .. action)
 
 	spawn(function()
 		pcall(function()
@@ -364,7 +340,6 @@ local function executeCommand(command)
 					si.Parent = parent
 					si.Source = data.code or ""
 					result = { success = true, scriptPath = si:GetFullName(), scriptType = scriptType }
-					log("✓ " .. si:GetFullName())
 				else
 					result = { success = false, error = "Invalid script type" }
 				end
@@ -374,7 +349,6 @@ local function executeCommand(command)
 				if so and so:IsA("LuaSourceContainer") then
 					so.Source = data.code or ""
 					result = { success = true, scriptPath = data.scriptPath }
-					log("✓ Updated " .. data.scriptPath)
 				else
 					result = { success = false, error = "Script not found" }
 				end
@@ -392,7 +366,6 @@ local function executeCommand(command)
 						end
 					end
 					result = { success = true, objectPath = obj:GetFullName(), className = cn }
-					log("✓ " .. obj:GetFullName())
 				else
 					result = { success = false, error = "Missing className" }
 				end
@@ -403,7 +376,6 @@ local function executeCommand(command)
 					local p = obj:GetFullName()
 					obj:Destroy()
 					result = { success = true, deletedPath = p }
-					log("✓ Deleted " .. p)
 				else
 					result = { success = false, error = "Object not found" }
 				end
@@ -419,7 +391,6 @@ local function executeCommand(command)
 						info.source = obj.Source
 					end
 					result = { success = true, info = info }
-					log("✓ Info " .. obj:GetFullName())
 				else
 					result = { success = false, error = "Object not found" }
 				end
@@ -428,10 +399,8 @@ local function executeCommand(command)
 				local ok, r = pcall(function() return loadstring(data.code)() end)
 				if ok then
 					result = { success = true, result = tostring(r) or "nil" }
-					log("✓ Executed")
 				else
 					result = { success = false, error = tostring(r) }
-					log("✗ " .. tostring(r))
 				end
 
 			elseif action == "list_objects" then
@@ -441,7 +410,6 @@ local function executeCommand(command)
 					table.insert(objects, { name = c.Name, className = c.ClassName })
 				end
 				result = { success = true, objects = objects, parentPath = parent:GetFullName() }
-				log("✓ Listed " .. #objects)
 
 			else
 				result = { success = false, error = "Unknown: " .. action }
@@ -449,7 +417,6 @@ local function executeCommand(command)
 		end)
 
 		safeHttpPost(API_BASE .. "/result", { commandId = command.id, result = result, sessionId = SESSION_ID })
-		log("← " .. (result.success and "OK" or "ERR"))
 	end)
 end
 
@@ -486,8 +453,7 @@ RunService.Heartbeat:Connect(function()
 		else
 			if isConnected then
 				isConnected = false
-				setActivated(false)
-				log("⚠ Disconnected")
+				setToggle(false)
 			end
 		end
 	end)
@@ -516,9 +482,9 @@ local toggleBtn = toolbar:CreateButton("Toggle Codely Bridge", "Open/close panel
 toggleBtn.Click:Connect(function() widget.Enabled = not widget.Enabled end)
 
 if not httpSuccess then
-	instructionLabel.Text = "⚠️ Enable HTTP in Game Settings"
-	instructionLabel.TextColor3 = C_RED
+	statusText.Text = "● HTTP not enabled — check Game Settings"
+	statusText.TextColor3 = C_RED
 end
 
-print("⚡ Codely Bridge " .. VERSION .. " loaded — INACTIVE")
-print("🔒 Press Connect in the panel to activate")
+print("⚡ Codely Bridge " .. VERSION .. " loaded")
+print("🔒 Click the toggle to activate")
