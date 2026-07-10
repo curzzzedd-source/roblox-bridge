@@ -9,21 +9,31 @@ local activated = false
 local connected = false
 local seen = {}
 
-local function post(path, body)
-	pcall(function()
-		HttpService:PostAsync(API .. path, HttpService:JSONEncode(body), Enum.HttpContentType.ApplicationJson, false)
-	end)
-end
-
-local function get(path)
+local function request(method, path, body)
 	local ok, res = pcall(function()
-		return HttpService:GetAsync(SERVER .. path, false)
+		local reqData = {
+			Url = API .. path,
+			Method = method,
+			Headers = { ["Content-Type"] = "application/json" },
+		}
+		if body then
+			reqData.Body = HttpService:JSONEncode(body)
+		end
+		return HttpService:RequestAsync(reqData)
 	end)
-	if ok and res then
-		local p, d = pcall(function() return HttpService:JSONDecode(res) end)
+	if ok and res and res.Success then
+		local p, d = pcall(function() return HttpService:JSONDecode(res.Body) end)
 		if p then return d end
 	end
 	return nil
+end
+
+local function post(path, body)
+	return request("POST", path, body)
+end
+
+local function get(path)
+	return request("GET", path, nil)
 end
 
 -- Register
@@ -169,7 +179,7 @@ task.spawn(function()
 		task.wait(2)
 		if not activated or not widget.Enabled then continue end
 
-		local data = get("/api/commands?sessionId=" .. SID)
+		local data = get("/commands?sessionId=" .. SID)
 		if data and data.commands then
 			for _, c in ipairs(data.commands) do
 				if not seen[c.id] then
