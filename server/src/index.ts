@@ -286,7 +286,7 @@ app.get('/api/result/:commandId', async (req: Request, res: Response) => {
 
   if (resultsCol) {
     const found = await resultsCol.findOneAndDelete({ commandId });
-    result = found && found.value ? found.value : null;
+    result = found || null;
   } else {
     result = memResults.get(commandId);
     if (result) memResults.delete(commandId);
