@@ -45,7 +45,7 @@ const memSessions = new Map<string, any>();
 
 // Studio registers its current place
 app.post('/api/register', async (req: Request, res: Response) => {
-  const { sessionId, placeId, placeName, gameId } = req.body;
+  const { sessionId, placeId, placeName, gameId, activated } = req.body;
 
   if (!sessionId) {
     return res.status(400).json({ success: false, error: 'Missing sessionId' });
@@ -57,6 +57,7 @@ app.post('/api/register', async (req: Request, res: Response) => {
     placeName,
     gameId,
     status: 'active',
+    activated: activated || false,
     updatedAt: new Date(),
   };
 
@@ -70,27 +71,32 @@ app.post('/api/register', async (req: Request, res: Response) => {
     memSessions.set(sessionId, session);
   }
 
-  console.log(`[${new Date().toISOString()}] Studio registered: ${placeName} (session: ${sessionId})`);
+  console.log(`[${new Date().toISOString()}] Studio registered: ${placeName} (activated: ${activated || false})`);
   res.json({ success: true, sessionId });
 });
 
 // Studio sends heartbeat
 app.post('/api/heartbeat', async (req: Request, res: Response) => {
-  const { sessionId, placeInfo } = req.body;
+  const { sessionId, placeInfo, activated } = req.body;
 
   if (!sessionId) {
     return res.status(400).json({ success: false, error: 'Missing sessionId' });
   }
 
+  const update: any = { status: 'active', updatedAt: new Date() };
+  if (placeInfo) Object.assign(update, placeInfo);
+  if (activated !== undefined) update.activated = activated;
+
   if (sessionsCol) {
     await sessionsCol.updateOne(
       { sessionId },
-      { $set: { status: 'active', updatedAt: new Date(), ...placeInfo } }
+      { $set: update }
     );
   } else if (memSessions.has(sessionId)) {
     const s = memSessions.get(sessionId);
     s.updatedAt = new Date();
     s.status = 'active';
+    if (activated !== undefined) s.activated = activated;
   }
 
   res.json({ success: true });
@@ -121,6 +127,7 @@ app.get('/api/session', async (req: Request, res: Response) => {
       placeName: session.placeName,
       gameId: session.gameId,
       status: session.status,
+      activated: session.activated || false,
     });
   } else {
     res.status(404).json({ error: 'No active Studio session' });
@@ -158,6 +165,22 @@ app.post('/api/command', async (req: Request, res: Response) => {
 
   if (!targetSession) {
     return res.status(404).json({ success: false, error: 'No active Studio session. Open Roblox Studio and ensure the plugin is loaded.' });
+  }
+
+  // Check if the session is activated
+  let sessionData: any = null;
+  if (sessionsCol) {
+    sessionData = await sessionsCol.findOne({ sessionId: targetSession });
+  } else {
+    sessionData = memSessions.get(targetSession);
+  }
+
+  if (!sessionData || !sessionData.activated) {
+    return res.status(403).json({ 
+      success: false, 
+      error: 'Studio is not activated. Click ACTIVATE in the Codely Bridge plugin panel in Roblox Studio.',
+      activated: false,
+    });
   }
 
   const commandId = `cmd_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
